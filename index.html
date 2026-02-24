@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MLBB Edu-Adventure AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Oswald:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ml-gold: #c9a45c;
+            --ml-gold-dark: #8a6d3b;
+            --ml-cyan: #00ffcc;
+            --ml-red: #ff4d4d;
+            --ml-green: #2ecc71;
+        }
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Roboto', sans-serif;
+            background-color: #000;
+            color: white;
+            touch-action: manipulation;
+        }
+
+        .ml-font { font-family: 'Cinzel', serif; }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background-image: url('https://i.imgur.com/ULWCp4n.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 1rem;
+            z-index: 10;
+        }
+
+        .hidden { display: none !important; }
+
+        .btn-ml {
+            background: linear-gradient(to bottom, var(--ml-gold), var(--ml-gold-dark));
+            border: 2px solid #fff;
+            padding: 14px 24px;
+            color: #fff;
+            text-transform: uppercase;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            clip-path: polygon(5% 0, 100% 0, 95% 100%, 0% 100%);
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .btn-ml:disabled { cursor: not-allowed; }
+
+        .btn-correct {
+            background: var(--ml-green) !important;
+            box-shadow: 0 0 20px var(--ml-green);
+            border-color: white !important;
+        }
+        .btn-wrong {
+            background: var(--ml-red) !important;
+            box-shadow: 0 0 20px var(--ml-red);
+            border-color: white !important;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        /* Animasi Kartu Hero yang Lebih Lembut */
+        .hero-card {
+            background: rgba(20, 20, 20, 0.9);
+            border: 2px solid rgba(201, 164, 92, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(30px) scale(0.9);
+        }
+
+        /* Animasi Masuk (Fade + Slide Up) */
+        @keyframes heroReveal {
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .hero-card:hover {
+            transform: scale(1.05);
+            border-color: var(--ml-gold);
+            box-shadow: 0 0 20px rgba(201, 164, 92, 0.6);
+            z-index: 5;
+        }
+        
+        .hero-card.selected { 
+            border-color: var(--ml-cyan); 
+            box-shadow: 0 0 30px var(--ml-cyan);
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        .hero-card.selected img {
+            filter: brightness(1.3) contrast(1.1);
+        }
+
+        .hero-card img {
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), filter 0.4s ease;
+        }
+
+        .hero-card:hover img {
+            transform: scale(1.15);
+        }
+
+        .hero-card .hero-label {
+            background: rgba(0, 0, 0, 0.8);
+            width: 100%;
+            padding: 6px 0;
+            transition: all 0.4s;
+            border-top: 1px solid rgba(201, 164, 92, 0.2);
+        }
+
+        .hero-card.selected .hero-label {
+            background: var(--ml-cyan);
+            color: #000;
+            font-weight: 900;
+        }
+
+        /* Efek Kilat Interaktif */
+        .selected::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: rotate(45deg);
+            animation: shine 1.5s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -150%; }
+            100% { left: 150%; }
+        }
+
+        .message-box {
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid var(--ml-gold);
+            padding: 1.5rem;
+            border-radius: 12px;
+            width: 100%;
+            box-shadow: 0 0 20px rgba(201, 164, 92, 0.2);
+        }
+
+        .loader-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid var(--ml-gold);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .correct-popup {
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            color: var(--ml-cyan);
+            text-shadow: 0 0 25px var(--ml-cyan);
+            animation: float-up 1.2s ease-out forwards;
+            z-index: 100;
+            pointer-events: none;
+        }
+        @keyframes float-up { 
+            0% { opacity: 0; transform: translate(-50%, 20px); } 
+            20% { opacity: 1; }
+            100% { opacity: 0; transform: translate(-50%, -120px); } 
+        }
+
+        .shake { animation: shake-anim 0.4s; }
+        @keyframes shake-anim {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        #music-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 50;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid var(--ml-gold);
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(201, 164, 92, 0.3);
+        }
+        #music-control:hover { transform: scale(1.1); border-color: white; }
+        #music-control:active { transform: scale(0.9); }
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop>
+        <source src="https://github.com/Suci1788/musikku/raw/refs/heads/main/Ascension_of_the_Valiant.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="music-control" onclick="toggleMusic()">
+        <span id="music-icon">🎵</span>
+    </div>
+
+    <div id="game-container">
+        <!-- Layar Utama -->
+        <div id="start-menu" class="screen">
+            <h1 class="ml-font text-6xl text-white mb-10 text-center drop-shadow-lg tracking-widest animate-pulse">MLBB EDU AI</h1>
+            <button onclick="startGameFlow()" class="btn-ml w-64 text-lg">Mulai Petualangan</button>
+        </div>
+
+        <!-- Pemilihan Hero (Mata Pelajaran) -->
+        <div id="hero-screen" class="screen hidden">
+            <h2 class="ml-font text-2xl text-yellow-400 mb-8 tracking-[0.3em] uppercase opacity-0" id="hero-title" style="animation: heroReveal 0.8s forwards;">PILIH MATA PELAJARAN</h2>
+            <div class="hero-grid" id="hero-list"></div>
+            
+            <div id="difficulty-area" class="mt-12 opacity-0 transform translate-y-6 transition-all duration-700 w-full max-w-sm hidden">
+                <p class="text-center text-xs text-cyan-400 mb-4 ml-font animate-pulse tracking-widest">KONFIRMASI JENJANG SEKOLAH</p>
+                <div class="grid grid-cols-3 gap-3">
+                    <button onclick="prepareGame('SD')" class="btn-ml text-xs">SD</button>
+                    <button onclick="prepareGame('SMP')" class="btn-ml text-xs">SMP</button>
+                    <button onclick="prepareGame('SMA')" class="btn-ml text-xs">SMA</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading AI -->
+        <div id="ai-loading" class="screen hidden">
+            <div class="loader-container">
+                <div class="spinner"></div>
+                <p class="ml-font text-yellow-500 animate-pulse tracking-widest">Menghubungkan ke Land of Knowledge...</p>
+                <p class="text-xs text-gray-400 italic">AI sedang menyusun strategi pertanyaan...</p>
+            </div>
+        </div>
+
+        <!-- Arena Permainan -->
+        <div id="arena" class="screen hidden">
+            <div class="w-full max-w-2xl px-4">
+                <div class="flex justify-between items-center mb-4">
+                    <span id="info-header" class="text-xs text-yellow-500 font-bold uppercase tracking-widest bg-black/40 px-3 py-1 rounded border border-yellow-900/50"></span>
+                    <span id="lives-header" class="text-xl drop-shadow-md"></span>
+                </div>
+                <div class="message-box mb-6">
+                    <div id="timer-bar" class="w-full bg-gray-800 h-1 mb-6 rounded-full overflow-hidden">
+                        <div id="timer-progress" class="bg-cyan-400 h-full w-full transition-all duration-100 ease-linear"></div>
+                    </div>
+                    <p id="question-text" class="text-xl font-bold text-center leading-relaxed min-h-[4rem]"></p>
+                </div>
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                <div class="mt-8 text-center">
+                    <p class="text-gray-500 text-xs tracking-widest uppercase mb-1">SKOR SAAT INI</p>
+                    <p id="score-display" class="text-4xl text-white font-bold ml-font tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over -->
+        <div id="game-over" class="screen hidden">
+            <div class="message-box max-w-sm text-center">
+                <h2 id="result-status" class="ml-font text-5xl mb-4 tracking-tighter">VICTORY</h2>
+                <div class="w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-500 to-transparent my-4"></div>
+                <p class="text-xl mb-6">Skor Akhir: <span id="final-score" class="text-yellow-500 font-bold">0</span></p>
+                <button onclick="location.reload()" class="btn-ml w-full">Kembali ke Lobi</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const apiKey = ""; 
+        const HEROES = [
+            { name: 'Granger', sub: 'Matematika', img: 'https://i.imgur.com/05DrsOd.jpeg' },
+            { name: 'Alucard', sub: 'B. Indonesia', img: 'https://i.imgur.com/2tGCvwq.jpeg' },
+            { name: 'Gatotkaca', sub: 'PPKN', img: 'https://i.imgur.com/L5CXFoH.jpeg' },
+            { name: 'Lukas', sub: 'IPAS', img: 'https://i.imgur.com/GSe5nDU.jpeg' },
+            { name: 'Tigreal', sub: 'Seni Rupa', img: 'https://i.imgur.com/bsBwo5M.jpeg' },
+            { name: 'Zilong', sub: 'B. Inggris', img: 'https://i.imgur.com/WJ31qiq.jpeg' }
+        ];
+
+        let state = {
+            subject: "",
+            grade: "",
+            questions: [],
+            qIdx: 0,
+            score: 0,
+            lives: 3,
+            timer: null,
+            isAnswering: false,
+            musicPlaying: false
+        };
+
+        const bgMusic = document.getElementById('bg-music');
+
+        window.toggleMusic = () => {
+            if (state.musicPlaying) {
+                bgMusic.pause();
+                document.getElementById('music-icon').innerText = '🔇';
+            } else {
+                bgMusic.play().catch(() => {});
+                document.getElementById('music-icon').innerText = '🎵';
+            }
+            state.musicPlaying = !state.musicPlaying;
+        };
+
+        window.startGameFlow = () => {
+            if (!state.musicPlaying) toggleMusic();
+            showHeroSelection();
+        };
+
+        async function fetchAIQuestions(subject, grade) {
+            const prompt = `Buatkan 10 soal pilihan ganda tentang ${subject} untuk tingkat ${grade} dalam format JSON. 
+            Struktur JSON: { "soal": [ { "q": "pertanyaan", "a": ["pilihan1", "pilihan2", "pilihan3", "pilihan4"], "c": 0 } ] }. 
+            'c' adalah indeks jawaban benar (0-3). Pastikan soal bervariasi dan menantang. Bahasa Indonesia.`;
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            
+            let retries = 5;
+            let delay = 1000;
+
+            while (retries > 0) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { responseMimeType: "application/json" }
+                        })
+                    });
+
+                    const data = await response.json();
+                    const text = data.candidates[0].content.parts[0].text;
+                    return JSON.parse(text).soal;
+                } catch (err) {
+                    retries--;
+                    if (retries === 0) throw err;
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        window.showHeroSelection = () => {
+            switchScreen('start-menu', 'hero-screen');
+            const list = document.getElementById('hero-list');
+            list.innerHTML = HEROES.map((h, index) => `
+                <div class="hero-card p-0 text-center" onclick="selectHero('${h.sub}', this)" 
+                     style="animation: heroReveal 0.6s cubic-bezier(0.4, 0, 0.2, 1) ${0.2 + (index * 0.15)}s forwards;">
+                    <img src="${h.img}" class="w-full aspect-[3/4] object-cover">
+                    <div class="hero-label">
+                        <p class="text-[10px] font-bold uppercase tracking-wider">${h.sub}</p>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        window.selectHero = (sub, el) => {
+            state.subject = sub;
+            document.querySelectorAll('.hero-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            
+            const diffArea = document.getElementById('difficulty-area');
+            diffArea.classList.remove('hidden');
+            // Sedikit delay agar transisi CSS berjalan
+            setTimeout(() => {
+                diffArea.style.opacity = '1';
+                diffArea.style.transform = 'translateY(0)';
+            }, 50);
+        };
+
+        window.prepareGame = async (grade) => {
+            state.grade = grade;
+            switchScreen('hero-screen', 'ai-loading');
+            try {
+                state.questions = await fetchAIQuestions(state.subject, state.grade);
+                state.qIdx = 0;
+                state.score = 0;
+                state.lives = 3;
+                switchScreen('ai-loading', 'arena');
+                loadQuestion();
+            } catch (e) {
+                alert("Koneksi gagal. Periksa sinyal Anda.");
+                switchScreen('ai-loading', 'hero-screen');
+            }
+        };
+
+        function loadQuestion() {
+            if (state.lives <= 0) return endGame();
+            if (state.qIdx >= state.questions.length) {
+                refreshQuestions();
+                return;
+            }
+
+            state.isAnswering = false;
+            const q = state.questions[state.qIdx];
+            document.getElementById('question-text').innerText = q.q;
+            document.getElementById('info-header').innerText = `${state.subject} • ${state.grade} • BABAK ${state.qIdx + 1}`;
+            document.getElementById('lives-header').innerText = "❤️".repeat(state.lives);
+            document.getElementById('score-display').innerText = state.score;
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = "";
+            q.a.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = "btn-ml normal-case !clip-none bg-black/60 text-sm border-gray-700 hover:border-white hover:bg-gray-800 opacity-0 transform translate-y-4";
+                btn.style.animation = `heroReveal 0.4s forwards ${i * 0.1}s`;
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(i, btn);
+                container.appendChild(btn);
+            });
+
+            startTimer();
+        }
+
+        async function refreshQuestions() {
+            clearInterval(state.timer);
+            document.getElementById('arena').classList.add('opacity-50');
+            const newQuestions = await fetchAIQuestions(state.subject, state.grade);
+            state.questions = [...state.questions, ...newQuestions];
+            document.getElementById('arena').classList.remove('opacity-50');
+            loadQuestion();
+        }
+
+        function startTimer() {
+            clearInterval(state.timer);
+            let time = 100;
+            const bar = document.getElementById('timer-progress');
+            state.timer = setInterval(() => {
+                if (state.isAnswering) return;
+                time -= 0.6; // Sedikit lebih cepat dari sebelumnya
+                bar.style.width = time + "%";
+                if (time <= 0) {
+                    clearInterval(state.timer);
+                    handleWrong();
+                }
+            }, 100);
+        }
+
+        function checkAnswer(idx, btn) {
+            if (state.isAnswering) return;
+            state.isAnswering = true;
+            clearInterval(state.timer);
+
+            const correct = state.questions[state.qIdx].c;
+            const allBtns = document.querySelectorAll('#options-container button');
+
+            allBtns.forEach((b, i) => {
+                b.disabled = true;
+                if (i === correct) {
+                    b.classList.add('btn-correct');
+                }
+            });
+
+            if (idx === correct) {
+                state.score += 100;
+                showPopup("VICTORY! ✨");
+                setTimeout(next, 1200);
+            } else {
+                btn.classList.add('btn-wrong');
+                handleWrong();
+            }
+        }
+
+        function handleWrong() {
+            state.lives--;
+            document.getElementById('game-container').classList.add('shake');
+            setTimeout(() => document.getElementById('game-container').classList.remove('shake'), 400);
+            
+            if (state.lives <= 0) {
+                setTimeout(endGame, 1200);
+            } else {
+                setTimeout(next, 1200);
+            }
+        }
+
+        function next() {
+            state.qIdx++;
+            loadQuestion();
+        }
+
+        function showPopup(txt) {
+            const p = document.createElement('div');
+            p.className = 'correct-popup';
+            p.innerText = txt;
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 1200);
+        }
+
+        function endGame() {
+            switchScreen('arena', 'game-over');
+            document.getElementById('final-score').innerText = state.score;
+            document.getElementById('result-status').innerText = state.lives > 0 ? "MVP" : "GAMEOVER";
+            document.getElementById('result-status').className = `ml-font text-6xl mb-4 tracking-wider ${state.lives > 0 ? 'text-cyan-400' : 'text-red-600'}`;
+        }
+
+        function switchScreen(hide, show) {
+            document.getElementById(hide).classList.add('hidden');
+            document.getElementById(show).classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
